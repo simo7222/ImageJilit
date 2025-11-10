@@ -19,7 +19,7 @@ public class Spheroid2D_ROITool implements PlugIn {
     @Override
     public void run(String arg) {
 
-        // === SELEZIONE CARTELLE ===
+        // === FOLDER SELECTION ===
         IJ.showMessage("Select Data Folder",
             "Please select the folder that contains your .tif images to process.\n\n" +
             "Each image will be analyzed and ROIs will be saved automatically.");
@@ -36,7 +36,7 @@ public class Spheroid2D_ROITool implements PlugIn {
         String outputDir = IJ.getDirectory("→ Select the folder to save results");
         if (outputDir == null) return;
 
-        // === PREPARAZIONE FILE E VARIABILI ===
+        // === FILE PROCESSING AND VARIABLE PREPARATION ===
         String logPath = outputDir + "no_roi.txt";
         try (FileWriter logFile = new FileWriter(logPath)) {
             logFile.write("Images without ROI:\n");
@@ -54,7 +54,7 @@ public class Spheroid2D_ROITool implements PlugIn {
         StringBuilder allResults = new StringBuilder();
         String resultsHeader = "";
 
-        // === LOOP SUI FILE ===
+        // ===  FILE LOOP ===
         for (String fileName : fileList) {
             if (!fileName.toLowerCase().endsWith(".tif")) continue;
 
@@ -76,14 +76,13 @@ public class Spheroid2D_ROITool implements PlugIn {
             if (rm == null) rm = new RoiManager();
             rm.reset();
 
-            // === PRIMA ALTERNATIVA ===
+            // === FIRST ALTERNATIVE ===
             IJ.selectWindow("Temp1");
             IJ.run("8-bit");
             IJ.run("Unsharp Mask...", "radius=20 mask=0.70");
             IJ.run("Variance...", "radius=4");
             IJ.run("Median...", "radius=6");
             IJ.run("Make Binary");
-            //IJ.run("Create Mask");
             rm.reset();
             IJ.run("Analyze Particles...",
                 "size=3000-Infinity circularity=0.20-0.90 display exclude summarize overlay add");
@@ -91,7 +90,7 @@ public class Spheroid2D_ROITool implements PlugIn {
             rm.runCommand("Show All");
             new ij.gui.WaitForUserDialog("FIRST ALTERNATIVE", "Click OK to see the second.").show();
 
-            // === SECONDA ALTERNATIVA ===
+            // === SECOND ALTERNATIVE ===
             IJ.selectWindow("Temp2");
             IJ.run("8-bit");
             IJ.run("Unsharp Mask...", "radius=20 mask=0.70");
@@ -107,7 +106,7 @@ public class Spheroid2D_ROITool implements PlugIn {
             rm.runCommand("Show All");
             new ij.gui.WaitForUserDialog("SECOND ALTERNATIVE", "Click OK to see the third.").show();
 
-            // === TERZA ALTERNATIVA ===
+            // === THIRD ALTERNATIVE ===
             IJ.selectWindow("Temp3");
             IJ.run("8-bit");
             IJ.run("Unsharp Mask...", "radius=30 mask=0.90");
@@ -120,7 +119,7 @@ public class Spheroid2D_ROITool implements PlugIn {
             rm.runCommand("Show All");
             new ij.gui.WaitForUserDialog("THIRD ALTERNATIVE", "Click OK to choose.").show();
 
-            // === SCELTA DELL'UTENTE ===
+            // === USER CHOICE ===
             GenericDialog gd = new GenericDialog("Choose the best segmentation");
             gd.addChoice("Which alternative do you want to use?",
                 new String[]{"First", "Second", "Third", "None - Skip"}, "First");
@@ -135,7 +134,7 @@ public class Spheroid2D_ROITool implements PlugIn {
                 continue;
             }
 
-            // === RIELABORAZIONE SU IMMAGINE SELEZIONATA ===
+            // === Image reprocessing based on the selected choice ===
             String sel = altChoice.equals("First") ? "Temp1a" :
                          altChoice.equals("Second") ? "Temp2a" : "Temp3a";
             IJ.selectWindow(sel);
@@ -158,7 +157,6 @@ public class Spheroid2D_ROITool implements PlugIn {
                 IJ.run("8-bit");
                 IJ.run("Unsharp Mask...", "radius=30 mask=0.90");
                 IJ.run("Auto Threshold", "method=Default");
-                IJ.run("Convert to Mask");
             }
 
             IJ.run("Analyze Particles...",
@@ -167,7 +165,8 @@ public class Spheroid2D_ROITool implements PlugIn {
             IJ.selectWindow("Temp4");
             rm.runCommand("Show All");
 
-            new ij.gui.WaitForUserDialog("Manual ROI Editing", "Delete unwanted ROIs and click OK when ready.").show();
+            new ij.gui.WaitForUserDialog("Manual ROI Editing",
+                "Delete unwanted ROIs and click OK when ready.").show();
 
             if (rm.getCount() == 0) {
                 logImageWithoutROI(fileName, logPath);
@@ -181,62 +180,67 @@ public class Spheroid2D_ROITool implements PlugIn {
             gdEnlarge.showDialog();
             String enlargeChoice = gdEnlarge.getNextChoice();
 
-            if (enlargeChoice.equals("Yes")) {
-                boolean satisfied = false;
-                while (!satisfied) {
-                    rm.runCommand("Show All");
-                    rm.runCommand("Show None");
-                    rm.setVisible(true);
-                    new ij.gui.WaitForUserDialog("ROI Selection",
-                        "Select the ROIs you want to enlarge in the ROI Manager, then click OK.").show();
+    if (enlargeChoice.equals("Yes")) {
+    boolean satisfied = false;
+    while (!satisfied) {
+        rm.setVisible(true);
+        new ij.gui.WaitForUserDialog("ROI Selection",
+            "Select the ROIs you want to enlarge in the ROI Manager, then click OK.").show();
 
-                    GenericDialog gdValue = new GenericDialog("ROI Enlarge Value");
-                    gdValue.addSlider("Enlarge value (pixels):", 0, 50, 10);
-                    gdValue.showDialog();
-                    double enlargeValue = gdValue.getNextNumber();
+        GenericDialog gdValue = new GenericDialog("ROI Enlarge Value");
+        gdValue.addSlider("Enlarge value (pixels):", 0, 50, 10);
+        gdValue.showDialog();
+        int enlargeValue = (int) gdValue.getNextNumber();
 
-                    int[] selected = rm.getSelectedIndexes();
-                    if (selected.length == 0) {
-                        IJ.showMessage("No ROIs selected", "Please select at least one ROI in the ROI Manager.");
-                        continue;
-                    }
+        int[] selected = rm.getSelectedIndexes();
+        if (selected.length == 0) {
+            IJ.showMessage("No ROIs selected", "Please select at least one ROI in the ROI Manager.");
+            continue;
+        }
 
-                    // --- Enlarge tutte le ROI selezionate ---
-                    for (int idx : selected) {
-                        rm.select(idx);
-                        IJ.run("Enlarge...", "enlarge=" + (int) enlargeValue);
-                    }
-
-                    // --- Seleziona tutte le ROI per la misurazione ---
-                   for (int i = 0; i < rm.getCount(); i++) {
-    				rm.select(i);
-				}
-
-
-                    GenericDialog confirm = new GenericDialog("Preview Applied");
-                    confirm.addMessage("The selected ROIs have been enlarged by " + (int) enlargeValue + " px.\n" +
-                                       "If not satisfied, choose 'Continue modifying' to adjust again.");
-                    confirm.addChoice("Next action:", new String[]{"Continue modifying", "OK - Proceed"}, "OK - Proceed");
-                    confirm.showDialog();
-                    String nextAction = confirm.getNextChoice();
-
-                    if (nextAction.equals("OK - Proceed")) satisfied = true;
-                }
+        // --- Applica l'enlarge a ogni ROI selezionata e aggiungi come nuova ROI ---
+        for (int idx : selected) {
+            rm.select(idx);
+            IJ.run("Enlarge...", "enlarge=" + enlargeValue);
+            // salva la ROI appena allargata come nuova
+            ij.gui.Roi newRoi = IJ.getImage().getRoi();
+            if (newRoi != null) {
+                newRoi.setName(rm.getRoi(idx).getName() + "_enlarged");
+                rm.addRoi(newRoi);
             }
+        }
 
-            // === MISURA ED ESPORTAZIONE ===
+        // --- Mostra tutte le ROI nel RoiManager ---
+        rm.runCommand("Show All");
+        IJ.getImage().updateAndDraw();
+
+        GenericDialog confirm = new GenericDialog("Preview Applied");
+        confirm.addMessage(
+            "The enlarged ROIs have been added to the ROI Manager.\n" +
+            "You can now review them visually (originals + enlarged).\n\n" +
+            "If you wish, delete unwanted ROIs manually in the ROI Manager.\n\n" +
+            "When ready, click 'OK - Proceed' to continue, or 'Continue modifying' to try again."
+        );
+        confirm.addChoice("Next action:",
+                new String[]{"Continue modifying", "OK - Proceed"}, "OK - Proceed");
+        confirm.showDialog();
+        String nextAction = confirm.getNextChoice();
+
+        if (nextAction.equals("OK - Proceed")) {
+            satisfied = true;
+        }
+    }
+
+    new ij.gui.WaitForUserDialog("Final ROI Review",
+        "Please delete any unwanted ROIs in the ROI Manager, then click OK to continue.").show();
+}
+
+            // === MEASUREMENT AND EXPORT ===
             IJ.selectWindow("Temp4");
-
-            // Assicura che tutte le ROI siano selezionate per la misura
-            
-
-     
-        	for (int i = 0; i < rm.getCount(); i++) {
-    		rm.select(i);
-    		
-            rm.runCommand("Measure");
-			}
-
+            for (int i = 0; i < rm.getCount(); i++) {
+                rm.select(i);
+                rm.runCommand("Measure");
+            }
 
             String baseName = fileName.contains(".") ?
                     fileName.substring(0, fileName.lastIndexOf(".")) : fileName;
