@@ -63,7 +63,7 @@ public class Spheroid2D_ROITool implements PlugIn {
             if (original == null) continue;
             original.show();
 
-            // Duplicazioni come nella macro
+          
             IJ.run("Duplicate...", "title=Temp1");
             IJ.run("Duplicate...", "title=Temp1a");
             IJ.run("Duplicate...", "title=Temp2");
@@ -198,11 +198,11 @@ public class Spheroid2D_ROITool implements PlugIn {
             continue;
         }
 
-        // --- Applica l'enlarge a ogni ROI selezionata e aggiungi come nuova ROI ---
+        // --- Apply ENLARGE to each selected ROI and add as a new ROI ---
         for (int idx : selected) {
             rm.select(idx);
             IJ.run("Enlarge...", "enlarge=" + enlargeValue);
-            // salva la ROI appena allargata come nuova
+            // save the newly enlarged ROI as new
             ij.gui.Roi newRoi = IJ.getImage().getRoi();
             if (newRoi != null) {
                 newRoi.setName(rm.getRoi(idx).getName() + "_enlarged");
@@ -210,7 +210,7 @@ public class Spheroid2D_ROITool implements PlugIn {
             }
         }
 
-        // --- Mostra tutte le ROI nel RoiManager ---
+        // --- Display all ROIs in RoiManager ---
         rm.runCommand("Show All");
         IJ.getImage().updateAndDraw();
 
@@ -247,7 +247,7 @@ public class Spheroid2D_ROITool implements PlugIn {
             rm.runCommand("Save", outputDir + baseName + "_ROIs.zip");
             IJ.saveAs("Results", outputDir + baseName + "_Results.csv");
 
-            // === CREAZIONE RIASSUNTO ===
+            // === Create Summary ===
             try (Scanner sc = new Scanner(new File(outputDir + baseName + "_Results.csv"))) {
                 String headerLine = sc.hasNextLine() ? sc.nextLine() : "";
                 if (resultsHeader.equals("")) resultsHeader = "Name," + headerLine;
@@ -265,7 +265,7 @@ public class Spheroid2D_ROITool implements PlugIn {
             IJ.run("Close All");
         }
 
-        // === SALVA FILE RIASSUNTIVO ===
+        // === Save Summary  ===
         if (!resultsHeader.isEmpty()) {
             try (FileWriter summary = new FileWriter(outputDir + "All_Results.csv")) {
                 summary.write(resultsHeader + "\n");
